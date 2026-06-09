@@ -1,0 +1,135 @@
+/* ══════════════════════════════════════════════════════
+   CARDS CONTAINER
+   ══════════════════════════════════════════════════════ */
+.help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+/* ══════════════════════════════════════════════════════
+   CARD STYLING
+   ══════════════════════════════════════════════════════ */
+.help-card {
+    background: color-mix(in srgb, var(--secondary-background-color) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--text-color) 8%, transparent);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.help-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary-color);
+}
+
+/* ══════════════════════════════════════════════════════
+   ICON BADGE
+   ══════════════════════════════════════════════════════ */
+.icon-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-badge .material-symbols-rounded {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.icon-badge svg {
+    font-size: 28px;
+    width: 28px !important;
+    height: 28px !important;
+    stroke: currentColor !important;
+    fill: none !important;
+    transition: all 0.3s ease;
+}
+
+/* ══════════════════════════════════════════════════════
+   COLOR CLASSES FOR ICON BADGES
+   ══════════════════════════════════════════════════════ */
+.icon-badge.blue {
+    background: color-mix(in srgb, #1f77b4 12%, transparent);
+    color: #1f77b4;
+}
+.icon-badge.orange {
+    background: color-mix(in srgb, #ff7f0e 12%, transparent);
+    color: #ff7f0e;
+}
+.icon-badge.purple {
+    background: color-mix(in srgb, #9a12b3 12%, transparent);
+    color: #9a12b3;
+}
+.icon-badge.green {
+    background: color-mix(in srgb, #2ca02c 12%, transparent);
+    color: #2ca02c;
+}
+.icon-badge.red {
+    background: color-mix(in srgb, #d62728 12%, transparent);
+    color: #d62728;
+}
+
+/* ══════════════════════════════════════════════════════
+   HOVER TRANSITIONS FOR CARD ICONS
+   ══════════════════════════════════════════════════════ */
+.help-card:hover .icon-badge.blue {
+    background: #1f77b4;
+    color: white;
+}
+.help-card:hover .icon-badge.orange {
+    background: #ff7f0e;
+    color: white;
+}
+.help-card:hover .icon-badge.purple {
+    background: #9a12b3;
+    color: white;
+}
+.help-card:hover .icon-badge.green {
+    background: #2ca02c;
+    color: white;
+}
+.help-card:hover .icon-badge.red {
+    background: #d62728;
+    color: white;
+}
+
+/* ══════════════════════════════════════════════════════
+   TYPOGRAPHY
+   ══════════════════════════════════════════════════════ */
+.card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    color: var(--text-color);
+}
+
+.card-desc {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: color-mix(in srgb, var(--text-color) 80%, transparent);
+    margin: 0;
+    flex-grow: 1;
+}
+
+
+
+

@@ -1,0 +1,253 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+/* ══════════════════════════════════════════════════════
+   FOOTER CONTAINER
+   ══════════════════════════════════════════════════════ */
+.custom-footer {
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    width: 100vw;
+    position: relative;
+    left: 0;
+    right: 0;
+    box-sizing: border-box;
+    margin-top: 30px;
+    padding: 20px max(20px, calc(50vw - 600px));
+    border-radius: 0;
+    
+    /* Glassmorphism Effect */
+    background: color-mix(in srgb, var(--secondary-background-color) 45%, transparent);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-top: 1px solid color-mix(in srgb, var(--text-color) 10%, transparent);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1);
+    
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* ══════════════════════════════════════════════════════
+   LAYOUT AND COLUMNS
+   ══════════════════════════════════════════════════════ */
+.footer-layout {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 20px;
+    width: 100%;
+}
+
+.footer-col {
+    flex: 1;
+    min-width: 250px;
+    display: flex;
+    flex-direction: column;
+}
+
+.footer-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-color);
+}
+
+.footer-title-link {
+    text-decoration: none !important;
+    color: inherit !important;
+    transition: opacity 0.25s ease;
+}
+
+.footer-title-link:hover {
+    opacity: 0.8;
+}
+
+.footer-logo-img {
+    height: 90px;
+    width: auto;
+    object-fit: contain;
+}
+
+.footer-text {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: color-mix(in srgb, var(--text-color) 70%, transparent);
+    margin: 0;
+}
+
+.footer-col-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-color);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    opacity: 0.9;
+}
+
+/* ══════════════════════════════════════════════════════
+   FOOTER NAVIGATION LINKS
+   ══════════════════════════════════════════════════════ */
+.footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.footer-links li {
+    margin: 0;
+}
+
+.footer-links a {
+    position: relative;
+    color: color-mix(in srgb, var(--text-color) 70%, transparent);
+    text-decoration: none;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    transition:
+        color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        background 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Animated underline ── */
+.footer-links a::after {
+    content: "";
+    position: absolute;
+    bottom: 1px;
+    left: 50%;
+    width: 0%;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa);
+    transform: translateX(-50%);
+    transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Shimmer sweep overlay ── */
+.footer-links a::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        120deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.06) 40%,
+        rgba(255, 255, 255, 0.12) 50%,
+        rgba(255, 255, 255, 0.06) 60%,
+        transparent 100%
+    );
+    transition: left 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* ── Icon base transition ── */
+.footer-links a .material-symbols-rounded {
+    font-size: 1.05rem;
+    color: color-mix(in srgb, var(--text-color) 50%, transparent);
+    transition:
+        color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Hover — glow + lift + underline + shimmer ── */
+.footer-links a:hover {
+    color: #6366f1;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, #6366f1 8%, transparent),
+        color-mix(in srgb, #8b5cf6 6%, transparent)
+    );
+    transform: translateX(3px) scale(1.03);
+    box-shadow:
+        0 3px 12px color-mix(in srgb, #6366f1 10%, transparent),
+        0 1px 3px color-mix(in srgb, #6366f1 6%, transparent);
+}
+
+.footer-links a:hover::after {
+    width: 55%;
+}
+
+.footer-links a:hover::before {
+    left: 100%;
+}
+
+.footer-links a:hover .material-symbols-rounded {
+    color: #6366f1;
+    transform: scale(1.18) rotate(-4deg);
+}
+
+/* ── Active / pressed feedback ── */
+.footer-links a:active {
+    transform: translateX(1px) scale(0.97);
+    transition-duration: 0.1s;
+}
+
+/* ── Focus-visible for accessibility ── */
+.footer-links a:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+/* ══════════════════════════════════════════════════════
+   CREDITS AND ATTRIBUTIONS
+   ══════════════════════════════════════════════════════ */
+.footer-credits {
+    font-size: 0.8rem;
+    color: color-mix(in srgb, var(--text-color) 60%, transparent);
+    margin-top: auto;
+    padding-top: 12px;
+}
+
+.footer-credits b {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════════
+   FOOTER BADGE (MOVED FROM HERO)
+   ══════════════════════════════════════════════════════ */
+.footer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 18px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    background: color-mix(in srgb, #6B8AFF 10%, transparent);
+    color: #6B8AFF;
+    border: 1px solid color-mix(in srgb, #6B8AFF 18%, transparent);
+    margin-top: 10px;
+    width: fit-content;
+}
+
+/* ══════════════════════════════════════════════════════
+   NAV BAR LOGO SIZE ADJUSTMENTS
+   ══════════════════════════════════════════════════════ */
+.stAppHeader img[data-testid="stLogo"] {
+    height: 46px !important;
+    max-height: 46px !important;
+    width: auto !important;
+    cursor: pointer;
+}
