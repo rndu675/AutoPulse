@@ -7,9 +7,6 @@ xgboost
 joblib
 scipy
 statsmodels
-diptest
-prince
-scikit-posthocs
 shap
 matplotlib
 folium
