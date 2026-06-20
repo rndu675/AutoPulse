@@ -3,7 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-from scipy.stats import gaussian_kde, spearmanr
+from scipy.stats import gaussian_kde
 import folium
 import branca.colormap as cm
 import copy
@@ -70,7 +70,7 @@ def app(df):
     # --- Market strategy metrics ---
     total_count = len(df)
     filtered_count = len(filtered_df)
-    perc_filtered = (filtered_count / total_count) * 100
+    perc_filtered = (filtered_count / total_count) * 100 if total_count > 0 else 0
     
     if not filtered_df.empty:
         median_p = filtered_df['price'].median()
@@ -240,35 +240,96 @@ def app(df):
 
         st.subheader("Price vs. Mileage (Value Decay)")
         try:
-            fig3 = px.scatter(filtered_df, x='millage_km', y='price', color='year_category',
-                              trendline="ols", title="How Mileage Affects Asking Price",
-                              labels={'millage_km': 'Mileage (km)', 'price': 'Price (Lakhs LKR)'},
-                              hover_data=['brand', 'yom'])
+            # 1. Compute Pearson correlation dynamically for each category and overall
+            cat_definitions = {
+                'Old': 'YOM < 2010',
+                'Intermediate': '2010 ≤ YOM ≤ 2017',
+                'Modern': 'YOM ≥ 2018'
+            }
+            
+            category_labels = {}
+            valid_corrs = {}
+            
+            for cat_name, cat_def in cat_definitions.items():
+                cat_data = filtered_df[filtered_df['year_category'] == cat_name]
+                if len(cat_data) > 1 and cat_data['millage_km'].nunique() > 1 and cat_data['price'].nunique() > 1:
+                    r = cat_data['millage_km'].corr(cat_data['price'], method='pearson')
+                    if not pd.isna(r):
+                        valid_corrs[cat_name] = r
+                        category_labels[cat_name] = f"{cat_name} ({cat_def}, r = {r:.2f})"
+                        continue
+                category_labels[cat_name] = f"{cat_name} ({cat_def}, r = N/A)"
+            
+            # Map the categories in a copy of the filtered dataframe for plotting
+            plot_df = filtered_df.copy()
+            plot_df['year_category_legend'] = plot_df['year_category'].map(category_labels)
+            
+            # Category orders to enforce Old, Intermediate, Modern ordering in the legend
+            cat_order = [category_labels[c] for c in ['Old', 'Intermediate', 'Modern']]
+            
+            # Try to plot with OLS trendline
+            try:
+                fig3 = px.scatter(plot_df, x='millage_km', y='price', color='year_category_legend',
+                                  trendline="ols", title="How Mileage Affects Asking Price",
+                                  labels={'millage_km': 'Mileage (km)', 'price': 'Price (Lakhs LKR)', 'year_category_legend': 'Year Category'},
+                                  category_orders={'year_category_legend': cat_order},
+                                  hover_data=['brand', 'yom'])
+            except Exception:
+                # Fall back to plotting without trendline if OLS fails (e.g. not enough data points in one category)
+                fig3 = px.scatter(plot_df, x='millage_km', y='price', color='year_category_legend',
+                                  title="How Mileage Affects Asking Price",
+                                  labels={'millage_km': 'Mileage (km)', 'price': 'Price (Lakhs LKR)', 'year_category_legend': 'Year Category'},
+                                  category_orders={'year_category_legend': cat_order},
+                                  hover_data=['brand', 'yom'])
+                                  
             fig3.update_layout(title_x=0.5, title_xanchor='center')
             st.plotly_chart(fig3, width="stretch")
             
-            # --- Dynamic Interpretation: Phase 1 Scatter ---
-            if filtered_df['millage_km'].nunique() > 1 and filtered_df['price'].nunique() > 1:
-                corr, _ = spearmanr(filtered_df['millage_km'], filtered_df['price'])
-                if not pd.isna(corr):
-                    strength = "strong" if abs(corr) > 0.7 else "moderate" if abs(corr) > 0.4 else "weak"
-                    st.markdown(clean_html(f"""
-                        <div style="background-color: var(--secondary-background-color); color: var(--text-color); padding: 10px; border-radius: 5px; border-left: 5px solid #2ca02c; font-size: 0.9rem;">
-                            <b>Value Decay:</b> There is a <b>{strength}</b> negative correlation (ρ = <b>{corr:.2f}</b>) between mileage and price in this category.
-                        </div>
-                    """), unsafe_allow_html=True)
-                else:
-                    st.markdown(clean_html(f"""
-                        <div style="background-color: var(--secondary-background-color); color: var(--text-color); padding: 10px; border-radius: 5px; border-left: 5px solid #2ca02c; font-size: 0.9rem;">
-                            <b>Value Decay:</b> Insufficient variance to calculate correlation.
-                        </div>
-                    """), unsafe_allow_html=True)
+            # Calculate overall Pearson correlation
+            if len(filtered_df) > 1 and filtered_df['millage_km'].nunique() > 1 and filtered_df['price'].nunique() > 1:
+                overall_r = filtered_df['millage_km'].corr(filtered_df['price'], method='pearson')
             else:
-                st.markdown(clean_html(f"""
-                    <div style="background-color: var(--secondary-background-color); color: var(--text-color); padding: 10px; border-radius: 5px; border-left: 5px solid #2ca02c; font-size: 0.9rem;">
-                        <b>Value Decay:</b> Insufficient variance in price or mileage to calculate correlation.
-                    </div>
-                """), unsafe_allow_html=True)
+                overall_r = np.nan
+                
+            # Generate the dynamic summary
+            if valid_corrs:
+                strongest_cat = max(valid_corrs.keys(), key=lambda k: abs(valid_corrs[k]))
+                strongest_r = valid_corrs[strongest_cat]
+                weakest_cat = min(valid_corrs.keys(), key=lambda k: abs(valid_corrs[k]))
+                weakest_r = valid_corrs[weakest_cat]
+                
+                # Check relationship direction for strongest and weakest
+                if 'Old' in valid_corrs and 'Modern' in valid_corrs:
+                    old_abs = abs(valid_corrs['Old'])
+                    modern_abs = abs(valid_corrs['Modern'])
+                    if old_abs > modern_abs:
+                        intro = "Mileage is a stronger predictor of price for <b>older</b> vehicles than for <b>newer</b> vehicles."
+                    elif old_abs < modern_abs:
+                        intro = "Mileage is a stronger predictor of price for <b>newer</b> vehicles than for <b>older</b> vehicles."
+                    else:
+                        intro = "Mileage has a similar predictive strength for price on older and newer vehicles."
+                else:
+                    intro = f"Mileage is a stronger predictor of price in the <b>{strongest_cat}</b> category than in other categories."
+                    
+                body = f"The strongest relationship is observed in the <b>{strongest_cat}</b> category (r = <b>{strongest_r:.2f}</b>), while the <b>{weakest_cat}</b> category shows the weakest relationship (r = <b>{weakest_r:.2f}</b>)."
+            else:
+                intro = "There is insufficient data to evaluate the relationship between mileage and price across categories."
+                body = ""
+                
+            overall_str = ""
+            if not pd.isna(overall_r):
+                direction = "lower" if overall_r < 0 else "higher"
+                overall_str = f"Overall, higher mileage is associated with <b>{direction}</b> asking prices (overall r = <b>{overall_r:.2f}</b>)."
+            
+            insight_text = f"{intro} {body} {overall_str}".strip()
+            
+            st.markdown(clean_html(f"""
+                <div style="background-color: var(--secondary-background-color); color: var(--text-color); padding: 10px; border-radius: 5px; border-left: 5px solid #2ca02c; font-size: 0.9rem;">
+                    <b>Value Decay:</b> {insight_text}
+                    <div style="margin-top: 6px; font-size: 0.78rem; color: #a1a1aa; font-style: italic;">Note: Pearson correlation (r) is used here to align with the OLS trendlines shown above.</div>
+                </div>
+            """), unsafe_allow_html=True)
+            
         except Exception as e:
             fig3 = px.scatter(filtered_df, x='millage_km', y='price', color='year_category',
                               title="How Mileage Affects Asking Price",
@@ -328,10 +389,10 @@ def app(df):
             if len(fuel_df) > 1:
                 most_exp = fuel_df.iloc[0]
                 least_exp = fuel_df.iloc[-1]
-                ratio = most_exp['price'] / least_exp['price']
+                ratio = most_exp['price'] / least_exp['price'] if least_exp['price'] > 0 else 0
                 st.markdown(clean_html(f"""
                     <div style="background-color: var(--secondary-background-color); color: var(--text-color); padding: 10px; border-radius: 5px; border-left: 5px solid #9467bd; font-size: 0.9rem;">
-                        <b>Fuel Variance:</b> <b>{most_exp['fuel_type']}</b> vehicles are currently listed <b>{ratio:.1f}x</b> higher than <b>{least_exp['fuel_type']}</b> options in this category.
+                        <b>Fuel Variance:</b> <b>{most_exp['fuel_type']}</b> vehicles are currently listed <b>{ratio:.1f}x</b> higher than <b>{least_exp['fuel_type']}</b> options.
                     </div>
                 """), unsafe_allow_html=True)
 
@@ -360,25 +421,106 @@ def app(df):
                             <b>Auto Premium:</b> Automatic transmissions currently carry a <b>{auto_premium:+.1f}L</b> median premium over manuals here.
                         </div>
                     """), unsafe_allow_html=True)
-            except:
+            except Exception:
                 pass
 
         with col6:
             st.subheader("Engine Capacity vs. Price")
-            fig7 = px.scatter(filtered_df, x='engine_cc', y='price', color='engine_segment',
-                              title="Engine Size Impact on Valuation",
-                              labels={'engine_cc': 'Engine Size (cc)', 'price': 'Price (Lakhs LKR)'})
-            fig7.update_layout(title_x=0.5, title_xanchor='center')
-            st.plotly_chart(fig7, width="stretch")
-            
-            # --- Dynamic Interpretation: Phase 3 Engine ---
-            corr_cc, _ = spearmanr(filtered_df['engine_cc'], filtered_df['price'])
-            strength_cc = "strong" if abs(corr_cc) > 0.6 else "moderate" if abs(corr_cc) > 0.3 else "weak"
-            st.markdown(clean_html(f"""
-                <div style="background-color: var(--secondary-background-color); color: var(--text-color); padding: 10px; border-radius: 5px; border-left: 5px solid #e377c2; font-size: 0.9rem;">
-                    <b>Engine Power:</b> Large engines show a <b>{strength_cc}</b> relationship with price (ρ = <b>{corr_cc:.2f}</b>) in this selection.
-                </div>
-            """), unsafe_allow_html=True)
+            try:
+                seg_names = [
+                    "Micro (<800cc)",
+                    "Compact (800-1200cc)",
+                    "Mid-Range (1200-1600cc)",
+                    "Large (>1600cc)"
+                ]
+                
+                segment_labels = {}
+                valid_corrs_cc = {}
+                
+                for seg in seg_names:
+                    seg_data = filtered_df[filtered_df['engine_segment'] == seg]
+                    if len(seg_data) > 1 and seg_data['engine_cc'].nunique() > 1 and seg_data['price'].nunique() > 1:
+                        r = seg_data['engine_cc'].corr(seg_data['price'], method='pearson')
+                        if not pd.isna(r):
+                            valid_corrs_cc[seg] = r
+                            segment_labels[seg] = f"{seg[:-1]}, r = {r:.2f})"
+                            continue
+                    segment_labels[seg] = f"{seg[:-1]}, r = N/A)"
+                
+                # Copy for plotting
+                plot_df_cc = filtered_df.copy()
+                plot_df_cc['engine_segment_legend'] = plot_df_cc['engine_segment'].map(segment_labels)
+                
+                # Ordering of engine segments in legend
+                seg_order = [segment_labels[s] for s in seg_names]
+                
+                try:
+                    fig7 = px.scatter(plot_df_cc, x='engine_cc', y='price', color='engine_segment_legend',
+                                      trendline="ols", title="Engine Size Impact on Valuation",
+                                      labels={'engine_cc': 'Engine Size (cc)', 'price': 'Price (Lakhs LKR)', 'engine_segment_legend': 'Engine Segment'},
+                                      category_orders={'engine_segment_legend': seg_order})
+                except Exception:
+                    fig7 = px.scatter(plot_df_cc, x='engine_cc', y='price', color='engine_segment_legend',
+                                      title="Engine Size Impact on Valuation",
+                                      labels={'engine_cc': 'Engine Size (cc)', 'price': 'Price (Lakhs LKR)', 'engine_segment_legend': 'Engine Segment'},
+                                      category_orders={'engine_segment_legend': seg_order})
+                                      
+                fig7.update_layout(title_x=0.5, title_xanchor='center')
+                st.plotly_chart(fig7, width="stretch")
+                
+                # Calculate overall correlation
+                if len(filtered_df) > 1 and filtered_df['engine_cc'].nunique() > 1 and filtered_df['price'].nunique() > 1:
+                    overall_r_cc = filtered_df['engine_cc'].corr(filtered_df['price'], method='pearson')
+                else:
+                    overall_r_cc = np.nan
+                
+                # Dynamic summary generator
+                if valid_corrs_cc:
+                    strongest_seg = max(valid_corrs_cc.keys(), key=lambda k: abs(valid_corrs_cc[k]))
+                    strongest_r_cc = valid_corrs_cc[strongest_seg]
+                    weakest_seg = min(valid_corrs_cc.keys(), key=lambda k: abs(valid_corrs_cc[k]))
+                    weakest_r_cc = valid_corrs_cc[weakest_seg]
+                    
+                    short_names = {
+                        "Micro (<800cc)": "Micro",
+                        "Compact (800-1200cc)": "Compact",
+                        "Mid-Range (1200-1600cc)": "Mid-Range",
+                        "Large (>1600cc)": "Large-engine"
+                    }
+                    
+                    str_name = short_names.get(strongest_seg, strongest_seg)
+                    wk_name = short_names.get(weakest_seg, weakest_seg)
+                    
+                    if abs(weakest_r_cc) < 0.1:
+                        weakest_desc = f"show almost no relationship between engine size and price (r = <b>{weakest_r_cc:.2f}</b>)"
+                    else:
+                        weakest_desc = f"show the weakest relationship between engine size and price (r = <b>{weakest_r_cc:.2f}</b>)"
+                        
+                    body = f"The strongest association is observed in <b>{str_name}</b> vehicles (r = <b>{strongest_r_cc:.2f}</b>), while <b>{wk_name}</b> vehicles {weakest_desc}."
+                else:
+                    body = "There is insufficient data to compare relationship strengths across engine segments."
+                
+                overall_desc = ""
+                if not pd.isna(overall_r_cc):
+                    abs_r = abs(overall_r_cc)
+                    strength = "strong" if abs_r > 0.6 else "moderate" if abs_r > 0.3 else "weak"
+                    overall_desc = f"Overall, engine size alone is a <b>{strength}</b> predictor of vehicle price (r = <b>{overall_r_cc:.2f}</b>)."
+                
+                insight_text_cc = f"The relationship between engine size and price varies across engine segments. {body} {overall_desc}".strip()
+                
+                st.markdown(clean_html(f"""
+                    <div style="background-color: var(--secondary-background-color); color: var(--text-color); padding: 10px; border-radius: 5px; border-left: 5px solid #e377c2; font-size: 0.9rem;">
+                        <b>Engine Power:</b> {insight_text_cc}
+                        <div style="margin-top: 6px; font-size: 0.78rem; color: #a1a1aa; font-style: italic;">Note: Pearson correlation (r) is used here to align with the OLS trendlines shown above.</div>
+                    </div>
+                """), unsafe_allow_html=True)
+                
+            except Exception as e:
+                fig7 = px.scatter(filtered_df, x='engine_cc', y='price', color='engine_segment',
+                                  title="Engine Size Impact on Valuation",
+                                  labels={'engine_cc': 'Engine Size (cc)', 'price': 'Price (Lakhs LKR)'})
+                fig7.update_layout(title_x=0.5, title_xanchor='center')
+                st.plotly_chart(fig7, width="stretch")
 
     # --- Perspective 4: Features & Comfort ---
     with dash_tabs[3]:
@@ -407,16 +549,16 @@ def app(df):
                 st.plotly_chart(fig8, width="stretch")
                 
                 # --- Dynamic Interpretation: Phase 4 Lift ---
-                if feature_impact:
-                    f_df = pd.DataFrame(feature_impact)
-                    f_df['Diff'] = f_df.groupby('Feature')['Median Price'].transform(lambda x: x.max() - x.min())
-                    top_f = f_df.sort_values(by='Diff', ascending=False).iloc[0]['Feature']
-                    top_v = f_df.sort_values(by='Diff', ascending=False).iloc[0]['Diff']
-                    st.markdown(clean_html(f"""
-                        <div style="background-color: var(--secondary-background-color); color: var(--text-color); padding: 10px; border-radius: 5px; border-left: 5px solid #bcbd22; font-size: 0.9rem;">
-                            <b>Feature Lift:</b> The presence of <b>{top_f}</b> currently adds the highest median value (approx. <b>+{top_v:.1f}L</b>) to these listings.
-                        </div>
-                    """), unsafe_allow_html=True)
+                f_df = pd.DataFrame(feature_impact)
+                f_df['Diff'] = f_df.groupby('Feature')['Median Price'].transform(lambda x: x.max() - x.min())
+                sorted_f_df = f_df.sort_values(by='Diff', ascending=False)
+                top_f = sorted_f_df.iloc[0]['Feature']
+                top_v = sorted_f_df.iloc[0]['Diff']
+                st.markdown(clean_html(f"""
+                    <div style="background-color: var(--secondary-background-color); color: var(--text-color); padding: 10px; border-radius: 5px; border-left: 5px solid #bcbd22; font-size: 0.9rem;">
+                        <b>Feature Lift:</b> The presence of <b>{top_f}</b> currently adds the highest median value (approx. <b>+{top_v:.1f}L</b>) to these listings.
+                    </div>
+                """), unsafe_allow_html=True)
 
         with col8:
             st.subheader("Modernity vs. Features (Availability)")
