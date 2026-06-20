@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import os
 import shap
 import plotly.express as px
 from datetime import datetime
@@ -98,7 +97,6 @@ def app(df):
         
         is_electric = (fuel_type == "Electric")
         engine_cc = st.slider("Engine Capacity (cc)", min_value=0, max_value=8000, value=0 if is_electric else 1300, step=100, disabled=is_electric)
-        millage = st.slider("Millage (km)", min_value=0, max_value=500000, value=50000, step=1000)
         
         default_gear_idx = gears.index("Automatic") if "Automatic" in gears else 0
         gear = st.selectbox("Transmission", gears, index=default_gear_idx if is_electric else 0, disabled=is_electric)
